@@ -40,6 +40,8 @@ const account: ResolvedAccount = {
   mailbox: 'bot@agents.groundmailbox.com',
   baseUrl: 'https://api.groundmail.dev',
   mode: 'channel',
+  dmPolicy: 'allowlist',
+  allowFrom: ['ana@example.com'],
 }
 
 function harness(waits: Array<() => Promise<any>>, listed: MailboxMessage[][]) {

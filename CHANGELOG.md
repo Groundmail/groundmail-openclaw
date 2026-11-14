@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5 (2026-11-14)
+
+- Only allowed senders start a conversation with the agent. New settings `dmPolicy` (`allowlist` by default, `open` or `disabled`) and `allowFrom` (addresses or `@domain`). `--owner-email` adds you automatically; add others with `--allow-from`. Mail from anyone else still reaches the main chat as the short note, so sign-up codes keep working.
+- **Upgrading:** with no `allowFrom` set, the agent stops answering email from people. Run `openclaw channels add --channel groundmail --allow-from you@example.com` to let yourself back in.
+
 ## 0.1.4 (2026-11-14)
 
 - When a reply can't be sent, the note in the agent's main chat is now fixed wording too: that the reply wasn't sent, why (can't send yet, or sending limit), and how to fix it. The reply the agent drafted stays out of the main session, since it was written in answer to an outside email.

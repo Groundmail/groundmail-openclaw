@@ -16,6 +16,44 @@ export const CHANNEL_ID = 'groundmail'
 export const MODES = ['channel', 'notify', 'tool'] as const
 export type Mode = (typeof MODES)[number]
 
+/**
+ * Who may start an agent turn by email (OpenClaw's usual DM policy).
+ *  allowlist  only senders in allowFrom (default; an empty list lets nobody in)
+ *  open       anyone, and only when allowFrom includes "*"
+ *  disabled   nobody
+ * Everyone else's mail still reaches the main chat as the fixed-wording note.
+ */
+export const DM_POLICIES = ['allowlist', 'open', 'disabled'] as const
+export type DmPolicy = (typeof DM_POLICIES)[number]
+
+export function normalizeDmPolicy(value: unknown): DmPolicy | undefined {
+  return typeof value === 'string' && (DM_POLICIES as readonly string[]).includes(value) ? (value as DmPolicy) : undefined
+}
+
+/** Lowercased addresses, "@domain" entries and "*"; anything else is dropped. */
+export function normalizeAllowFrom(value: unknown): string[] {
+  const items = Array.isArray(value) ? value : typeof value === 'string' ? value.split(',') : []
+  const out: string[] = []
+  for (const item of items) {
+    if (typeof item !== 'string') continue
+    const entry = item.trim().toLowerCase()
+    if (entry === '*' || /^@[a-z0-9.-]+\.[a-z]{2,}$/.test(entry) || /^[^\s@]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(entry)) {
+      if (!out.includes(entry)) out.push(entry)
+    }
+  }
+  return out
+}
+
+/** Whether this sender may start an agent turn. */
+export function senderAllowed(from: string | null | undefined, policy: DmPolicy, allowFrom: string[]): boolean {
+  if (policy === 'disabled') return false
+  if (policy === 'open') return allowFrom.includes('*')
+  const address = (from ?? '').trim().toLowerCase()
+  if (!address.includes('@')) return false
+  const domain = address.slice(address.lastIndexOf('@'))
+  return allowFrom.includes(address) || allowFrom.includes(domain)
+}
+
 export type ResolvedAccount = {
   accountId: string
   name?: string
@@ -25,6 +63,8 @@ export type ResolvedAccount = {
   mailbox: string | null
   baseUrl: string
   mode: Mode
+  dmPolicy: DmPolicy
+  allowFrom: string[]
 }
 
 type AccountConfig = {
@@ -34,6 +74,8 @@ type AccountConfig = {
   mailbox?: string
   baseUrl?: string
   mode?: string
+  dmPolicy?: string
+  allowFrom?: unknown
 }
 
 type ChannelSection = AccountConfig & { accounts?: Record<string, AccountConfig>; defaultAccount?: string }
@@ -86,5 +128,7 @@ export function resolveAccount(params: { cfg: OpenClawConfig; accountId?: string
     mailbox,
     baseUrl: (normalizeOptionalString(merged.baseUrl) ?? DEFAULT_BASE_URL).replace(/\/+$/, ''),
     mode: normalizeMode(merged.mode) ?? 'channel',
+    dmPolicy: normalizeDmPolicy(merged.dmPolicy) ?? 'allowlist',
+    allowFrom: normalizeAllowFrom(merged.allowFrom),
   }
 }

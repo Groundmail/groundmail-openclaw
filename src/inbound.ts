@@ -1,6 +1,6 @@
 // One received email -> one agent turn (or one note in the agent's main chat).
 import { buildAgentMainSessionKey } from 'openclaw/plugin-sdk/routing'
-import { CHANNEL_ID, type Mode, type ResolvedAccount } from './accounts.js'
+import { CHANNEL_ID, senderAllowed, type DmPolicy, type Mode, type ResolvedAccount } from './accounts.js'
 import { GroundmailApiError, type GroundmailApi, type MailboxMessage } from './api.js'
 import { getGroundmailRuntime } from './runtime.js'
 
@@ -10,7 +10,11 @@ const MAX_BODY_CHARS = 20_000
 export type DispatchOutcome = { kind: 'dispatched' } | { kind: 'dropped'; reason: string }
 
 /** How a received email should reach the agent. */
-export function routeFor(message: MailboxMessage, mode: Mode): 'reply' | 'notify' | 'skip' {
+export function routeFor(
+  message: MailboxMessage,
+  mode: Mode,
+  access: { dmPolicy: DmPolicy; allowFrom: string[] } = { dmPolicy: 'allowlist', allowFrom: [] },
+): 'reply' | 'notify' | 'skip' {
   if (message.direction !== 'inbound' || message.held) return 'skip'
   if (mode === 'tool') return 'skip'
   if (mode === 'notify') return 'notify'
@@ -20,6 +24,8 @@ export function routeFor(message: MailboxMessage, mode: Mode): 'reply' | 'notify
   const from = (message.from ?? '').toLowerCase()
   if (message.auto_submitted || NO_REPLY.test(from)) return 'notify'
   if (message.authentication?.dmarc !== 'pass') return 'notify'
+  // Only senders the owner allowed start an agent turn; the rest get the note.
+  if (!senderAllowed(from, access.dmPolicy, access.allowFrom)) return 'notify'
   return 'reply'
 }
 
@@ -167,7 +173,7 @@ export async function dispatchMessage(params: {
   const channelRuntime = ctx.channelRuntime
   if (!channelRuntime) return { kind: 'dropped', reason: 'OpenClaw channel runtime is missing' }
 
-  const route = routeFor(message, ctx.account.mode)
+  const route = routeFor(message, ctx.account.mode, ctx.account)
   if (route === 'skip') return { kind: 'dropped', reason: `not delivered in ${ctx.account.mode} mode` }
 
   const sender = (message.from ?? '').toLowerCase()

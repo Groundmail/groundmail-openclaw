@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { buildCliArgs, buildCliEnv, findBlockedFlag } from './cli.js'
 import { sendText, stripPrefix, subjectFrom } from './channel.js'
-import { provisionMailbox } from './setup.js'
+import { provisionMailbox, setupAdapter } from './setup.js'
+import { normalizeAllowFrom } from './accounts.js'
 import { message } from './fixtures.js'
 
 function fakeFetch(routes: Record<string, (body: any, headers: Record<string, string>) => [number, unknown]>) {
@@ -81,6 +82,8 @@ describe('sendText', () => {
     mailbox: 'bot@x.dev',
     baseUrl: BASE,
     mode: 'channel' as const,
+    dmPolicy: 'allowlist' as const,
+    allowFrom: ['ana@example.com'],
   }
 
   it('answers the latest email from that person when given a thread', async () => {
@@ -122,5 +125,24 @@ describe('CLI wrapper', () => {
   it('adds the base URL only when it is not the default', () => {
     expect(buildCliArgs(['x'], BASE)).toEqual(['x'])
     expect(buildCliArgs(['x'], 'http://localhost:3003')).toEqual(['x', '--base-url', 'http://localhost:3003'])
+  })
+})
+
+describe('allowed senders at setup', () => {
+  const configured = {
+    channels: { groundmail: { apiKey: 'gm_x', mailbox: 'bot@agents.groundmailbox.com', allowFrom: ['ana@example.com'] } },
+  }
+
+  it('adds the owner and new senders to the list instead of replacing it', async () => {
+    const out = await setupAdapter.prepareAccountConfigInput({
+      cfg: configured,
+      accountId: 'default',
+      input: { ownerEmail: 'Kim@Example.com', allowFrom: '@acme.com, not an address' },
+    })
+    expect(out.allowFrom).toBe('ana@example.com,@acme.com,kim@example.com')
+  })
+
+  it('normalizes what it writes to the config', () => {
+    expect(normalizeAllowFrom(['A@B.co', '@Acme.com', '*', 'nope', 'a@b.co'])).toEqual(['a@b.co', '@acme.com', '*'])
   })
 })

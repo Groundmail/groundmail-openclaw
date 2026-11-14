@@ -12,11 +12,15 @@ const account: ResolvedAccount = {
   mailbox: 'bot@agents.groundmailbox.com',
   baseUrl: 'https://api.groundmail.dev',
   mode: 'channel',
+  dmPolicy: 'allowlist',
+  allowFrom: ['ana@example.com'],
 }
+
+const allowAna = { dmPolicy: 'allowlist' as const, allowFrom: ['ana@example.com'] }
 
 describe('routeFor', () => {
   it('answers a person who passed DMARC', () => {
-    expect(routeFor(message(), 'channel')).toBe('reply')
+    expect(routeFor(message(), 'channel', allowAna)).toBe('reply')
   })
 
   it('passes automatic and no-reply mail to the main chat instead of answering it', () => {
@@ -34,6 +38,18 @@ describe('routeFor', () => {
   it('follows the mode', () => {
     expect(routeFor(message(), 'notify')).toBe('notify')
     expect(routeFor(message(), 'tool')).toBe('skip')
+  })
+
+  it('starts an agent turn only for allowed senders; everyone else gets the note', () => {
+    expect(routeFor(message(), 'channel')).toBe('notify')
+    expect(routeFor(message(), 'channel', { dmPolicy: 'allowlist', allowFrom: ['@example.com'] })).toBe('reply')
+    expect(routeFor(message(), 'channel', { dmPolicy: 'allowlist', allowFrom: ['bob@example.com'] })).toBe('notify')
+    expect(routeFor(message({ from: 'ANA@Example.com' }), 'channel', allowAna)).toBe('reply')
+    expect(routeFor(message(), 'channel', { dmPolicy: 'disabled', allowFrom: ['ana@example.com'] })).toBe('notify')
+    expect(routeFor(message(), 'channel', { dmPolicy: 'open', allowFrom: [] })).toBe('notify')
+    expect(routeFor(message(), 'channel', { dmPolicy: 'open', allowFrom: ['*'] })).toBe('reply')
+    // A lookalike domain is not the allowed domain.
+    expect(routeFor(message({ from: 'ana@evil-example.com' }), 'channel', { dmPolicy: 'allowlist', allowFrom: ['@example.com'] })).toBe('notify')
   })
 
   it('skips held and outbound mail', () => {

@@ -3,7 +3,7 @@
 import { defineChannelSetupContract } from 'openclaw/plugin-sdk/channel-setup'
 import { createPatchedAccountSetupAdapter, setSetupChannelEnabled } from 'openclaw/plugin-sdk/setup'
 import { normalizeOptionalString } from 'openclaw/plugin-sdk/string-coerce-runtime'
-import { CHANNEL_ID, MODES, normalizeMode, listAccountIds, resolveAccount, resolveDefaultAccountId } from './accounts.js'
+import { CHANNEL_ID, MODES, normalizeAllowFrom, normalizeMode, listAccountIds, resolveAccount, resolveDefaultAccountId } from './accounts.js'
 import { GroundmailApi, type Mailbox } from './api.js'
 
 export const DOCS_URL = 'https://docs.groundmail.dev/ai/openclaw'
@@ -26,6 +26,7 @@ type SetupInput = {
   ownerEmail?: string
   mode?: string
   baseUrl?: string
+  allowFrom?: string
 }
 
 function describeMode(mode: string, address: string): string {
@@ -116,6 +117,9 @@ const baseAdapter = createPatchedAccountSetupAdapter({
     if (baseUrl) patch.baseUrl = baseUrl
     const mode = normalizeMode(i.mode)
     if (mode) patch.mode = mode
+    // The owner is always allowed to write to their agent.
+    const allowFrom = normalizeAllowFrom([...normalizeAllowFrom(i.allowFrom), ...normalizeAllowFrom(i.ownerEmail)])
+    if (allowFrom.length > 0) patch.allowFrom = allowFrom
     return patch
   },
 })
@@ -130,8 +134,11 @@ export const setupAdapter = {
     const apiKey = normalizeOptionalString(i.apiKey) ?? current.apiKey
     const baseUrl = normalizeOptionalString(i.baseUrl) ?? current.baseUrl
     const mode = normalizeMode(i.mode) ?? current.mode
+    // New senders are added to the list, never swapped for it.
+    const allowFrom = normalizeAllowFrom([...current.allowFrom, ...normalizeAllowFrom(i.allowFrom), ...normalizeAllowFrom(i.ownerEmail)])
+    const withAllow = allowFrom.length > 0 ? { allowFrom: allowFrom.join(',') } : {}
     // Already set up and nothing new asked for: keep it.
-    if (current.configured && !i.apiKey && !i.mailbox && !i.localPart) return input
+    if (current.configured && !i.apiKey && !i.mailbox && !i.localPart) return { ...i, ...withAllow }
     const result = await provisionMailbox({
       baseUrl,
       accountId,
@@ -142,8 +149,17 @@ export const setupAdapter = {
     })
     for (const line of result.lines) runtime?.log?.(line)
     runtime?.log?.(describeMode(mode, result.mailbox))
-    runtime?.log?.('Anyone who knows the address can write to the agent. Its mail is marked as written by an outsider, and held spam never reaches it.')
-    return { ...i, mailbox: result.mailbox, ...(result.apiKey ? { apiKey: result.apiKey } : {}) }
+    runtime?.log?.(
+      allowFrom.length > 0
+        ? `Only ${allowFrom.join(', ')} can start a conversation with the agent. Mail from anyone else, like sign-up codes, reaches its main chat as a short note.`
+        : 'Nobody can start a conversation with the agent by email yet. Add yourself: --allow-from you@example.com. Mail from anyone, like sign-up codes, still reaches its main chat as a short note.',
+    )
+    return {
+      ...i,
+      mailbox: result.mailbox,
+      ...(result.apiKey ? { apiKey: result.apiKey } : {}),
+      ...withAllow,
+    }
   },
   validateInput: () => null,
 }
@@ -179,6 +195,13 @@ export const setupContract = defineChannelSetupContract({
       cli: {
         flags: '--mode <mode>',
         description: 'channel (default): mail from people wakes the agent and it replies in the thread. notify: the agent tells you about new mail. tool: nothing inbound, email only when asked',
+      },
+    },
+    allowFrom: {
+      kind: 'string',
+      cli: {
+        flags: '--allow-from <emails>',
+        description: 'Who can start a conversation with the agent by email: addresses or @domain, comma-separated. Your --owner-email is added for you',
       },
     },
     baseUrl: {
@@ -244,11 +267,19 @@ export const setupPlugin = {
         currentValue: ({ cfg, accountId }: any) => resolveAccount({ cfg, accountId }).mailbox ?? undefined,
         normalizeValue: ({ value }: any) => normalizeOptionalString(value) ?? '',
       },
+      {
+        inputKey: 'allowFrom',
+        message: 'Who can email the agent? Your address, or @yourcompany.com (comma-separated)',
+        required: false,
+        applyEmptyValue: false,
+        currentValue: ({ cfg, accountId }: any) => resolveAccount({ cfg, accountId }).allowFrom.join(', ') || undefined,
+        normalizeValue: ({ value }: any) => normalizeAllowFrom(value).join(','),
+      },
     ],
     completionNote: {
       title: 'Groundmail next steps',
       lines: [
-        'Restart the gateway, then email the address. In channel mode the agent answers in the same thread.',
+        'Restart the gateway, then email the address from an allowed sender. In channel mode the agent answers in the same thread.',
         "An address made with no account can't send until you confirm your email: the agent will ask you for it the first time it tries to reply.",
         `Docs: ${DOCS_URL}`,
       ],

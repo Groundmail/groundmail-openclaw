@@ -32,13 +32,13 @@
 
 ```bash
 openclaw plugins install @groundmail/openclaw
-openclaw channels add --channel groundmail
+openclaw channels add --channel groundmail --owner-email you@example.com
 openclaw gateway restart
 ```
 
-That's all: with no key, `channels add` creates an address for your agent with no account, such as `bot-7f2k@agents.groundmailbox.com`. Email it and the agent answers.
+That's all: with no key, `channels add` creates an address for your agent with no account, such as `bot-7f2k@agents.groundmailbox.com`. Email it from your address and the agent answers.
 
-To give it a name, add `--local-part sales`. To let it send as well as receive, add your own email with `--owner-email you@example.com`: you get a code, and once you give it to the agent it can email anyone.
+`--owner-email` lets the agent send as well as receive: you get a code, and once you give it to the agent it can email anyone. It also adds you to the allowed senders. To give the address a name, add `--local-part sales`.
 
 Already have a Groundmail account? Pass `--api-key gm_…`. OpenClaw uses your mailbox (or creates one) and stores a new key that reaches only that mailbox. Your account key is never written to the config.
 
@@ -52,11 +52,13 @@ Already have a Groundmail account? Pass `--api-key gm_…`. OpenClaw uses your m
 
 Change it with `openclaw channels add --channel groundmail --mode notify`.
 
+Only allowed senders start a conversation with the agent; everyone else's mail arrives as the short note in its main chat. Add people or whole domains with `--allow-from a@x.com,@yourcompany.com`. Set `dmPolicy` to `open` (with `"*"` in `allowFrom`) to let anyone in, or `disabled` to let nobody in.
+
 The agent only answers mail that passed DMARC, so a forged sender never gets a reply. Held spam never reaches it.
 
 ## Every email is untrusted
 
-Anyone who knows the address can write to your agent. The plugin hands the agent only what a person would see (hidden text removed), fenced off and labelled as written by an outsider. The one-time code and links are pulled out for it, and mail that looks like it's trying to give the agent instructions comes with a warning. Notes in the agent's main chat, where it has its full context and tools, say only that an email arrived, with the code if there is one: nothing the sender wrote.
+Anyone who knows the address can email it, but only allowed senders reach the agent. The plugin hands the agent only what a person would see (hidden text removed), fenced off and labelled as written by an outsider. The one-time code and links are pulled out for it, and mail that looks like it's trying to give the agent instructions comes with a warning. Notes in the agent's main chat, where it has its full context and tools, say only that an email arrived, with the code if there is one: nothing the sender wrote.
 
 ## More than replies
 
