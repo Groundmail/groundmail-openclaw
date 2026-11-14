@@ -20,7 +20,7 @@ const manifest = {
   channelConfigs: {
     groundmail: {
       label: 'Groundmail',
-      description: 'Email for your agent. Mail from people wakes it and it answers in the same thread.',
+      description: 'An agent mailbox: your agent gets its own email inbox and answers mail in the same thread.',
       schema: channelConfigSchema.schema,
       uiHints: channelConfigSchema.uiHints,
     },

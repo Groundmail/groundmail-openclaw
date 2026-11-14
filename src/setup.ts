@@ -15,7 +15,7 @@ export const META = {
   docsPath: '/channels/groundmail',
   docsLabel: 'groundmail',
   blurb:
-    'Your agent gets its own email address. People email it and it answers in the same thread; sign-up codes and other automated mail come to you in chat. No account needed to start.',
+    'An agent mailbox: your agent gets its own email inbox. People you allow email it and it answers in the same thread; sign-up codes and other automated mail come to you in chat. No account needed to start.',
   order: 80,
 }
 

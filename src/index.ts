@@ -6,7 +6,7 @@ import { setGroundmailRuntime } from './runtime.js'
 export default defineChannelPluginEntry({
   id: 'groundmail',
   name: 'Groundmail',
-  description: 'Groundmail email channel: your agent gets its own email address.',
+  description: 'Groundmail agent mailboxes: your agent gets its own email inbox.',
   plugin: groundmailPlugin,
   setRuntime: setGroundmailRuntime,
   // `openclaw groundmail -- ...` is what the bundled skill tells the agent to run.

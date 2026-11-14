@@ -1,8 +1,8 @@
 {
   "id": "groundmail",
   "name": "Groundmail",
-  "description": "Groundmail email channel for OpenClaw: your agent gets its own email address, answers mail in the thread and can sign up for things on its own",
-  "version": "0.1.5",
+  "description": "Agent mailboxes for OpenClaw: give your agent its own email inbox in one command, no account needed. It answers mail in the thread and gets sign-up codes on its own",
+  "version": "0.1.6",
   "categories": [
     "channels"
   ],
@@ -15,7 +15,7 @@
   "channelConfigs": {
     "groundmail": {
       "label": "Groundmail",
-      "description": "Email for your agent. Mail from people wakes it and it answers in the same thread.",
+      "description": "An agent mailbox: your agent gets its own email inbox and answers mail in the same thread.",
       "schema": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",

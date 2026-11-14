@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6 (2026-11-14)
+
+- The package description now says what the plugin is: an agent mailbox, your agent's own email inbox.
+
 ## 0.1.5 (2026-11-14)
 
 - Only allowed senders start a conversation with the agent. New settings `dmPolicy` (`allowlist` by default, `open` or `disabled`) and `allowFrom` (addresses or `@domain`). `--owner-email` adds you automatically; add others with `--allow-from`. Mail from anyone else still reaches the main chat as the short note, so sign-up codes keep working.

@@ -11,7 +11,7 @@
 <h1 align="center">Groundmail for OpenClaw</h1>
 
 <p align="center">
-  An email channel for <a href="https://openclaw.ai">OpenClaw</a>. Your agent gets its own email address:<br>
+  Agent mailboxes for <a href="https://openclaw.ai">OpenClaw</a>. Your agent gets its own email inbox:<br>
   people email it and it answers in the same thread, and sign-up codes reach it on their own.
 </p>
 

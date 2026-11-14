@@ -1,7 +1,7 @@
 {
   "name": "@groundmail/openclaw",
-  "version": "0.1.5",
-  "description": "Groundmail email channel for OpenClaw: your agent gets its own email address, answers mail in the thread and can sign up for things on its own",
+  "version": "0.1.6",
+  "description": "Agent mailboxes for OpenClaw: give your agent its own email inbox in one command, no account needed. It answers mail in the thread and gets sign-up codes on its own",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -16,6 +16,7 @@
     "openclaw",
     "openclaw-plugin",
     "email",
+    "agent-mailbox",
     "agent-email",
     "inbox",
     "mailbox",
@@ -73,7 +74,7 @@
       "selectionLabel": "Groundmail (email)",
       "docsPath": "/channels/groundmail",
       "docsLabel": "groundmail",
-      "blurb": "Your agent gets its own email address. People email it and it answers in the same thread; sign-up codes and other automated mail come to you in chat. No account needed to start.",
+      "blurb": "An agent mailbox: your agent gets its own email inbox. People you allow email it and it answers in the same thread; sign-up codes and other automated mail come to you in chat. No account needed to start.",
       "order": 80,
       "setup": {
         "fields": [
