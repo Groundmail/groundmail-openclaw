@@ -1,0 +1,152 @@
+{
+  "name": "@groundmail/openclaw",
+  "version": "0.1.0",
+  "description": "Groundmail email channel for OpenClaw: your agent gets its own email address, answers mail in the thread and can sign up for things on its own",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Groundmail/groundmail-openclaw.git"
+  },
+  "homepage": "https://docs.groundmail.dev/ai/openclaw",
+  "bugs": {
+    "url": "https://github.com/Groundmail/groundmail-openclaw/issues"
+  },
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "email",
+    "agent-email",
+    "inbox",
+    "mailbox",
+    "groundmail"
+  ],
+  "files": [
+    "dist",
+    "skills",
+    "assets",
+    "openclaw.plugin.json",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=24.16.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/build-manifest.mjs --check",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "manifest": "node scripts/build-manifest.mjs",
+    "manifest:check": "node scripts/build-manifest.mjs --check",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "groundmail-cli": ">=0.50.1 <1.0.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "openclaw": "2026.11.3",
+    "typescript": "^5",
+    "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.11.3"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
+  "openclaw": {
+    "extensions": [
+      "./dist/index.js"
+    ],
+    "setupEntry": "./dist/setup-entry.js",
+    "channel": {
+      "id": "groundmail",
+      "label": "Groundmail",
+      "selectionLabel": "Groundmail (email)",
+      "docsPath": "/channels/groundmail",
+      "docsLabel": "groundmail",
+      "blurb": "Your agent gets its own email address. People email it and it answers in the same thread; sign-up codes and other automated mail come to you in chat. No account needed to start.",
+      "order": 80,
+      "setup": {
+        "fields": [
+          {
+            "key": "apiKey",
+            "kind": "string",
+            "sensitive": true,
+            "cli": {
+              "flags": "--api-key <key>",
+              "description": "Groundmail API key. Leave it out to get a new address with no account; an account key is swapped for one limited to the agent's mailbox"
+            }
+          },
+          {
+            "key": "mailbox",
+            "kind": "string",
+            "cli": {
+              "flags": "--mailbox <address>",
+              "description": "Use this existing mailbox (address or mbx_ id)"
+            }
+          },
+          {
+            "key": "localPart",
+            "kind": "string",
+            "cli": {
+              "flags": "--local-part <name>",
+              "description": "Name for a new address, e.g. sales -> sales@agents.groundmailbox.com"
+            }
+          },
+          {
+            "key": "ownerEmail",
+            "kind": "string",
+            "cli": {
+              "flags": "--owner-email <email>",
+              "description": "Your email, for a new address made with no account. You get a code; the agent can email you, and can email anyone once you give it the code"
+            }
+          },
+          {
+            "key": "mode",
+            "kind": "choice",
+            "choices": [
+              "channel",
+              "notify",
+              "tool"
+            ],
+            "cli": {
+              "flags": "--mode <mode>",
+              "description": "channel (default): mail from people wakes the agent and it replies in the thread. notify: the agent tells you about new mail. tool: nothing inbound, email only when asked"
+            }
+          },
+          {
+            "key": "baseUrl",
+            "kind": "string",
+            "cli": {
+              "flags": "--base-url <url>",
+              "description": "Groundmail API base URL (default https://api.groundmail.dev)"
+            }
+          }
+        ]
+      }
+    },
+    "compat": {
+      "pluginApi": ">=2026.11.3",
+      "minGatewayVersion": "2026.11.3"
+    },
+    "build": {
+      "openclawVersion": "2026.11.3",
+      "pluginSdkVersion": "2026.11.3"
+    },
+    "install": {
+      "npmSpec": "@groundmail/openclaw",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.11.3",
+      "allowInvalidConfigRecovery": true
+    }
+  }
+}
