@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { ResolvedAccount } from './accounts.js'
+import { GroundmailApiError } from './api.js'
 import { message } from './fixtures.js'
 import { buildAgentText, dispatchMessage, routeFor } from './inbound.js'
 
@@ -101,6 +102,42 @@ describe('dispatchMessage', () => {
       text: 'Thanks Ana!',
       idempotencyKey: 'openclaw-reply-mbm_1-1',
     })
+  })
+
+  it('tells the agent in its main chat when its reply is refused, instead of losing it', async () => {
+    const c = ctx()
+    const api = {
+      reply: vi.fn(async () => {
+        throw new GroundmailApiError(403, 'forbidden', 'This mailbox can receive but not send yet. Name your person with POST /mailboxes/{id}/owner.')
+      }),
+    }
+    const system = { enqueueSystemEvent: vi.fn(() => true), requestHeartbeat: vi.fn() }
+    const outcome = await dispatchMessage({
+      ctx: c,
+      api: api as any,
+      message: message(),
+      mailboxAddress: 'bot@agents.groundmailbox.com',
+      system,
+    })
+    expect(outcome).toEqual({ kind: 'dispatched' })
+    const [note, opts] = system.enqueueSystemEvent.mock.calls[0] as unknown as [string, { contextKey: string }]
+    expect(note).toContain('Your email reply to ana@example.com was not sent')
+    expect(note).toContain('can receive but not send yet')
+    expect(note).toContain('mailboxes owner bot@agents.groundmailbox.com --owner-email')
+    expect(note).toContain('mailboxes reply bot@agents.groundmailbox.com mbm_1')
+    expect(note).toContain('--- draft ---\nThanks Ana!\n--- end of draft ---')
+    expect(opts.contextKey).toBe('groundmail:default:mbm_1:refused')
+    expect(system.requestHeartbeat).toHaveBeenCalled()
+  })
+
+  it('still fails loudly on errors that a retry could fix', async () => {
+    const c = ctx()
+    const api = { reply: vi.fn(async () => { throw new GroundmailApiError(500, 'internal_error', 'boom') }) }
+    const system = { enqueueSystemEvent: vi.fn(() => true), requestHeartbeat: vi.fn() }
+    await expect(
+      dispatchMessage({ ctx: c, api: api as any, message: message(), mailboxAddress: 'bot@agents.groundmailbox.com', system }),
+    ).rejects.toThrow('boom')
+    expect(system.enqueueSystemEvent).not.toHaveBeenCalled()
   })
 
   it('sends a sign-up code to the main chat and replies to no one', async () => {

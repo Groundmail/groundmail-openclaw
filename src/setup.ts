@@ -249,6 +249,7 @@ export const setupPlugin = {
       title: 'Groundmail next steps',
       lines: [
         'Restart the gateway, then email the address. In channel mode the agent answers in the same thread.',
+        "An address made with no account can't send until you confirm your email: the agent will ask you for it the first time it tries to reply.",
         `Docs: ${DOCS_URL}`,
       ],
     },

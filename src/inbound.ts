@@ -1,7 +1,7 @@
 // One received email -> one agent turn (or one note in the agent's main chat).
 import { buildAgentMainSessionKey } from 'openclaw/plugin-sdk/routing'
 import { CHANNEL_ID, type Mode, type ResolvedAccount } from './accounts.js'
-import type { GroundmailApi, MailboxMessage } from './api.js'
+import { GroundmailApiError, type GroundmailApi, type MailboxMessage } from './api.js'
 import { getGroundmailRuntime } from './runtime.js'
 
 const NO_REPLY = /^(no-?reply|do-?not-?reply|mailer-daemon|postmaster|bounces?|notifications?)([+._-]|@)/i
@@ -78,6 +78,54 @@ export function buildAgentText(params: {
   ].join('\n')
 }
 
+/**
+ * What the agent is told, in its main chat, when its reply was refused (the address
+ * can't send yet, a daily cap, a DMARC rule). Without this the sender gets nothing
+ * and nobody knows: the refusal only reaches the gateway log.
+ */
+export function buildRefusedReplyText(params: {
+  message: MailboxMessage
+  mailboxAddress: string
+  reason: string
+  draft: string
+}): string {
+  const { message, mailboxAddress, reason, draft } = params
+  const draftShown = draft.length > 2_000 ? `${draft.slice(0, 2_000)}\n[... cut]` : draft
+  return [
+    `Your email reply to ${message.from ?? 'the sender'} was not sent. Groundmail said: ${reason}`,
+    '',
+    `Tell the user. If this address (${mailboxAddress}) was made with no account, it can't send until the user confirms their email:`,
+    `1. Ask the user for their email, then run: openclaw groundmail -- mailboxes owner ${mailboxAddress} --owner-email <their email>`,
+    `2. Ask them for the 6-digit code we email them, then run: openclaw groundmail -- mailboxes verify ${mailboxAddress} --code <code>`,
+    `3. Send the reply again: openclaw groundmail -- mailboxes reply ${mailboxAddress} ${message.id} --text "..."`,
+    '',
+    'The reply you wrote:',
+    '--- draft ---',
+    draftShown,
+    '--- end of draft ---',
+  ].join('\n')
+}
+
+type SystemQueue = {
+  enqueueSystemEvent: (text: string, opts: { sessionKey: string; contextKey?: string }) => boolean
+  requestHeartbeat: (opts: Record<string, unknown>) => void
+}
+
+/** Put a note in the agent's main session and wake it, so it tells the user. */
+function notifyMainSession(params: { system: SystemQueue; agentId: string; accountId: string; text: string; contextKey: string }): boolean {
+  const sessionKey = buildAgentMainSessionKey({ agentId: params.agentId })
+  const queued = params.system.enqueueSystemEvent(params.text, { sessionKey, contextKey: params.contextKey })
+  if (!queued) return false
+  params.system.requestHeartbeat({
+    source: 'other',
+    intent: 'immediate',
+    reason: `groundmail:${params.accountId}:${params.contextKey}`,
+    agentId: params.agentId,
+    sessionKey,
+  })
+  return true
+}
+
 type GatewayCtx = {
   cfg: unknown
   accountId: string
@@ -93,10 +141,7 @@ export async function dispatchMessage(params: {
   api: GroundmailApi
   message: MailboxMessage
   mailboxAddress: string
-  system?: {
-    enqueueSystemEvent: (text: string, opts: { sessionKey: string; contextKey?: string }) => boolean
-    requestHeartbeat: (opts: Record<string, unknown>) => void
-  }
+  system?: SystemQueue
 }): Promise<DispatchOutcome> {
   const { ctx, api, message, mailboxAddress } = params
   const channelRuntime = ctx.channelRuntime
@@ -116,22 +161,18 @@ export async function dispatchMessage(params: {
     peer: { kind: 'direct', id: sender },
   })
 
+  const system = (): SystemQueue => params.system ?? (getGroundmailRuntime().system as unknown as SystemQueue)
+
   if (route === 'notify') {
     // Into the agent's main session; it tells the user wherever they last talked.
-    const system = params.system ?? getGroundmailRuntime().system
-    const sessionKey = buildAgentMainSessionKey({ agentId: agentRoute.agentId })
-    const queued = system.enqueueSystemEvent(buildAgentText({ message, mailboxAddress, route }), {
-      sessionKey,
+    const queued = notifyMainSession({
+      system: system(),
+      agentId: agentRoute.agentId,
+      accountId: ctx.accountId,
+      text: buildAgentText({ message, mailboxAddress, route }),
       contextKey: `groundmail:${ctx.accountId}:${message.id}`,
     })
     if (!queued) return { kind: 'dropped', reason: 'the system event queue refused the note' }
-    system.requestHeartbeat({
-      source: 'other',
-      intent: 'immediate',
-      reason: `groundmail:${ctx.accountId}:new-mail`,
-      agentId: agentRoute.agentId,
-      sessionKey,
-    })
     return { kind: 'dispatched' }
   }
 
@@ -198,11 +239,28 @@ export async function dispatchMessage(params: {
               const text = typeof payload.text === 'string' ? payload.text.trim() : ''
               if (!text) return { visibleReplySent: false }
               replies += 1
-              await api.reply(mailboxAddress, message.id, {
-                text,
-                // A retry of the same turn can never email the sender twice.
-                idempotencyKey: `openclaw-reply-${message.id}-${replies}`,
-              })
+              try {
+                await api.reply(mailboxAddress, message.id, {
+                  text,
+                  // A retry of the same turn can never email the sender twice.
+                  idempotencyKey: `openclaw-reply-${message.id}-${replies}`,
+                })
+              } catch (error) {
+                // Refused, not failed: retrying won't help, so tell the agent in its
+                // main chat instead of letting the reply vanish into the log.
+                if (error instanceof GroundmailApiError && (error.status === 403 || error.status === 429)) {
+                  ctx.log?.warn?.(`groundmail: reply to ${sender} refused (${error.status}): ${error.message}`)
+                  notifyMainSession({
+                    system: system(),
+                    agentId: agentRoute.agentId,
+                    accountId: ctx.accountId,
+                    text: buildRefusedReplyText({ message, mailboxAddress, reason: error.message, draft: text }),
+                    contextKey: `groundmail:${ctx.accountId}:${message.id}:refused`,
+                  })
+                  return { visibleReplySent: false }
+                }
+                throw error
+              }
               ctx.setStatus({ ...ctx.getStatus(), accountId: ctx.accountId, lastOutboundAt: Date.now() })
               return { visibleReplySent: true }
             },
