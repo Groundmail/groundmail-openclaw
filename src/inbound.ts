@@ -105,26 +105,24 @@ export function buildAgentText(params: { message: MailboxMessage; mailboxAddress
  * can't send yet, a daily cap, a DMARC rule). Without this the sender gets nothing
  * and nobody knows: the refusal only reaches the gateway log.
  */
-export function buildRefusedReplyText(params: {
-  message: MailboxMessage
-  mailboxAddress: string
-  reason: string
-  draft: string
-}): string {
-  const { message, mailboxAddress, reason, draft } = params
-  const draftShown = draft.length > 2_000 ? `${draft.slice(0, 2_000)}\n[... cut]` : draft
+export function buildRefusedReplyText(params: { message: MailboxMessage; mailboxAddress: string; status: number }): string {
+  // Fixed wording only. The draft was written in reply to an outside email, so it
+  // never goes into the main session; neither does the server's error text.
+  const { message, mailboxAddress, status } = params
+  const id = SAFE_ID.test(message.id) ? message.id : null
+  const why =
+    status === 429
+      ? 'This mailbox has reached its sending limit for now.'
+      : "This mailbox can't send yet. If it was made with no account, the user has to confirm their email first."
   return [
-    `Your email reply (to message ${SAFE_ID.test(message.id) ? message.id : 'in your inbox'}) was not sent. Groundmail said: ${reason}`,
+    `Your email reply from ${mailboxAddress} was not sent. ${why}`,
     '',
-    `Tell the user. If this address (${mailboxAddress}) was made with no account, it can't send until the user confirms their email:`,
+    'Tell the user. To let it send:',
     `1. Ask the user for their email, then run: openclaw groundmail -- mailboxes owner ${mailboxAddress} --owner-email <their email>`,
     `2. Ask them for the 6-digit code we email them, then run: openclaw groundmail -- mailboxes verify ${mailboxAddress} --code <code>`,
-    `3. Send the reply again: openclaw groundmail -- mailboxes reply ${mailboxAddress} ${message.id} --text "..."`,
-    '',
-    'The reply you wrote:',
-    '--- draft ---',
-    draftShown,
-    '--- end of draft ---',
+    id
+      ? `3. Read the email again and write a new reply: openclaw groundmail -- mailboxes read ${mailboxAddress} ${id} --json, then openclaw groundmail -- mailboxes reply ${mailboxAddress} ${id} --text "..."`
+      : `3. Find the email with openclaw groundmail -- mailboxes read ${mailboxAddress} --unread --json and reply to it again.`,
   ].join('\n')
 }
 
@@ -277,7 +275,7 @@ export async function dispatchMessage(params: {
                     system: system(),
                     agentId: agentRoute.agentId,
                     accountId: ctx.accountId,
-                    text: buildRefusedReplyText({ message, mailboxAddress, reason: error.message, draft: text }),
+                    text: buildRefusedReplyText({ message, mailboxAddress, status: error.status }),
                     contextKey: `groundmail:${ctx.accountId}:${message.id}:refused`,
                   })
                   return { visibleReplySent: false }

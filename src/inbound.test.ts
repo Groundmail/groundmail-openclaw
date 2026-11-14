@@ -155,12 +155,13 @@ describe('dispatchMessage', () => {
     })
     expect(outcome).toEqual({ kind: 'dispatched' })
     const [note, opts] = system.enqueueSystemEvent.mock.calls[0] as unknown as [string, { contextKey: string }]
-    expect(note).toContain('Your email reply (to message mbm_1) was not sent')
+    expect(note).toContain('Your email reply from bot@agents.groundmailbox.com was not sent')
     expect(note).not.toContain('ana@example.com')
-    expect(note).toContain('can receive but not send yet')
+    // Nothing an outside sender could have shaped reaches the main session.
+    expect(note).not.toContain('Thanks Ana!')
+    expect(note).not.toContain('POST /mailboxes')
     expect(note).toContain('mailboxes owner bot@agents.groundmailbox.com --owner-email')
     expect(note).toContain('mailboxes reply bot@agents.groundmailbox.com mbm_1')
-    expect(note).toContain('--- draft ---\nThanks Ana!\n--- end of draft ---')
     expect(opts.contextKey).toBe('groundmail:default:mbm_1:refused')
     expect(system.requestHeartbeat).toHaveBeenCalled()
   })

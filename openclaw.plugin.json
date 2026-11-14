@@ -2,7 +2,7 @@
   "id": "groundmail",
   "name": "Groundmail",
   "description": "Groundmail email channel for OpenClaw: your agent gets its own email address, answers mail in the thread and can sign up for things on its own",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "categories": [
     "channels"
   ],

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4 (2026-11-14)
+
+- When a reply can't be sent, the note in the agent's main chat is now fixed wording too: that the reply wasn't sent, why (can't send yet, or sending limit), and how to fix it. The reply the agent drafted stays out of the main session, since it was written in answer to an outside email.
+
 ## 0.1.3 (2026-11-13)
 
 - Notes in the agent's main chat are now fixed wording: that a new email arrived, the one-time code if there is one (digits only), and how to read it. Nothing the sender wrote, not even the subject or their address, reaches the main session. The "reply not sent" note no longer names the sender either.
