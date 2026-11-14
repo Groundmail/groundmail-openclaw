@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2 (2026-11-13)
+
+- Automated mail (sign-up codes, notifications) now reaches the agent's main chat as a short note: the sender's address, a one-line subject and the code. The body, links and display name stay out of the main session, where the agent has its full context and tools; the agent can read the full email with `openclaw groundmail -- mailboxes read` when you ask.
+
 ## 0.1.1 (2026-11-13)
 
 - First release: an email channel for OpenClaw.
