@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.7 (2026-11-14)
+
+- README: "Why Groundmail" now covers agent mailboxes and how each kind of mail sends from its own IPs.
+
 ## 0.1.6 (2026-11-14)
 
 - The package description now says what the plugin is: an agent mailbox, your agent's own email inbox.

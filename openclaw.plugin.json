@@ -2,7 +2,7 @@
   "id": "groundmail",
   "name": "Groundmail",
   "description": "Agent mailboxes for OpenClaw: give your agent its own email inbox in one command, no account needed. It answers mail in the thread and gets sign-up codes on its own",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "categories": [
     "channels"
   ],
