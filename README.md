@@ -46,7 +46,7 @@ Already have a Groundmail account? Pass `--api-key gm_…`. OpenClaw uses your m
 
 | Mode | Mail from people | Automated mail (sign-up codes, notifications) |
 |------|------------------|-----------------------------------------------|
-| `channel` (default) | Wakes the agent; its answer goes back in the same thread | A short note in its main chat (sender, subject, code); no reply |
+| `channel` (default) | Wakes the agent; its answer goes back in the same thread | A short note in its main chat with the code; no reply |
 | `notify` | A short note in its main chat to tell you about; no reply | Same |
 | `tool` | Nothing arrives on its own | Nothing arrives on its own |
 
@@ -56,7 +56,7 @@ The agent only answers mail that passed DMARC, so a forged sender never gets a r
 
 ## Every email is untrusted
 
-Anyone who knows the address can write to your agent. The plugin hands the agent only what a person would see (hidden text removed), fenced off and labelled as written by an outsider. The one-time code and links are pulled out for it, and mail that looks like it's trying to give the agent instructions comes with a warning. Notes in the agent's main chat, where it has its full context and tools, carry only the sender, a one-line subject and the code: never the body.
+Anyone who knows the address can write to your agent. The plugin hands the agent only what a person would see (hidden text removed), fenced off and labelled as written by an outsider. The one-time code and links are pulled out for it, and mail that looks like it's trying to give the agent instructions comes with a warning. Notes in the agent's main chat, where it has its full context and tools, say only that an email arrived, with the code if there is one: nothing the sender wrote.
 
 ## More than replies
 

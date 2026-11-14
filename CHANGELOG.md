@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3 (2026-11-13)
+
+- Notes in the agent's main chat are now fixed wording: that a new email arrived, the one-time code if there is one (digits only), and how to read it. Nothing the sender wrote, not even the subject or their address, reaches the main session. The "reply not sent" note no longer names the sender either.
+
 ## 0.1.2 (2026-11-13)
 
 - Automated mail (sign-up codes, notifications) now reaches the agent's main chat as a short note: the sender's address, a one-line subject and the code. The body, links and display name stay out of the main session, where the agent has its full context and tools; the agent can read the full email with `openclaw groundmail -- mailboxes read` when you ask.
